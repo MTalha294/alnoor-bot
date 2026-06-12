@@ -69,7 +69,7 @@ app.post('/telegram', (req, res) => {
 });
 
 app.get('/setup-telegram', (req, res) => {
-  const url = `${req.protocol}://${req.get('host')}/telegram`;
+  const url = `https://${req.get('host')}/telegram`;
   https.get(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/setWebhook?url=${url}`, (r) => {
     let data = '';
     r.on('data', chunk => data += chunk);
