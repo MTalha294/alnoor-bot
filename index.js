@@ -1,13 +1,64 @@
 const express = require('express');
 const twilio = require('twilio');
 const https = require('https');
+const nodemailer = require('nodemailer');
 const app = express();
 
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
-const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID; // Aapka Telegram Chat ID
+const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
+const GMAIL_USER = process.env.GMAIL_USER;       // aapki gmail
+const GMAIL_PASS = process.env.GMAIL_PASS;       // gmail app password
+
+// ─── EMAIL NOTIFICATION ───────────────────────────────
+async function sendEmailNotification(studentMsg, platform, contactId) {
+  if (!GMAIL_USER || !GMAIL_PASS) return;
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: GMAIL_USER,
+      pass: GMAIL_PASS
+    }
+  });
+
+  const mailOptions = {
+    from: GMAIL_USER,
+    to: 'M.talhaofcl@gmail.com',
+    subject: '🔔 Al-Noor — Naya Enrollment Request!',
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#f9f9f9;padding:20px;border-radius:10px;">
+        <div style="background:#00a884;padding:20px;border-radius:8px;text-align:center;">
+          <h1 style="color:white;margin:0;">🕌 Al-Noor Quran Academy</h1>
+          <p style="color:white;margin:5px 0;">Naya Enrollment Request!</p>
+        </div>
+        <div style="background:white;padding:20px;margin-top:15px;border-radius:8px;border-left:4px solid #00a884;">
+          <h2 style="color:#333;">📝 Student Details:</h2>
+          <p><strong>Platform:</strong> ${platform}</p>
+          <p><strong>Contact ID:</strong> ${contactId}</p>
+          <p><strong>Message:</strong></p>
+          <div style="background:#f0f0f0;padding:15px;border-radius:6px;font-size:16px;">
+            "${studentMsg}"
+          </div>
+        </div>
+        <div style="background:#e8f5e9;padding:15px;margin-top:15px;border-radius:8px;text-align:center;">
+          <p style="color:#2e7d32;font-weight:bold;">⚡ Jaldi reply karein — student wait kar raha hai!</p>
+          <p style="color:#555;">📞 03114272394</p>
+        </div>
+        <p style="color:#999;font-size:12px;text-align:center;margin-top:15px;">Al-Noor Bot — Automatic Notification</p>
+      </div>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('📧 Email notification sent!');
+  } catch (err) {
+    console.error('Email error:', err.message);
+  }
+}
 
 // ─── BOT MENU ─────────────────────────────────────────
 const MAIN_MENU = `🕌 *Al-Noor Quran Academy*
@@ -207,8 +258,9 @@ function isEnrollmentDetails(msg) {
 }
 
 function notifyAdmin(studentName, studentMsg, platform, contactId) {
-  if (!ADMIN_CHAT_ID) return;
-  const notification = `🔔 *NAYA ENROLLMENT REQUEST!*
+  // Telegram notification
+  if (ADMIN_CHAT_ID) {
+    const notification = `🔔 *NAYA ENROLLMENT REQUEST!*
 ━━━━━━━━━━━━━━━━━━
 👤 *Platform:* ${platform}
 📱 *Contact:* ${contactId}
@@ -216,7 +268,10 @@ function notifyAdmin(studentName, studentMsg, platform, contactId) {
 "${studentMsg}"
 ━━━━━━━━━━━━━━━━━━
 ⚡ _Jaldi reply karein!_`;
-  sendTelegram(ADMIN_CHAT_ID, notification);
+    sendTelegram(ADMIN_CHAT_ID, notification);
+  }
+  // Email notification
+  sendEmailNotification(studentMsg, platform, contactId);
 }
 
 
